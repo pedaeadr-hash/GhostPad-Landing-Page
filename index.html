@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <title>GhostPad — Documentação Técnica & Arquitetura da Ponte Bluetooth</title>
+  <meta name="description" content="Use seu smartphone como ponte Bluetooth para jogar no PC com qualquer controle. O celular lê o gamepad pela Gamepad API e o Windows enxerga um controle Xbox 360 oficial via driver ViGEmBus.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="assets/icon.png">
+  <link rel="apple-touch-icon" href="assets/icon.png">
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Subtle mesh background overlay -->
+  <div class="mesh-bg" aria-hidden="true"></div>
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <nav class="nav-glass" aria-label="Navegação Principal">
+      <a href="#hero" class="nav-brand" id="navBrand">
+        <div class="nav-icon">
+          <img src="assets/icon.png" alt="GhostPad Logo" width="26" height="26">
+        </div>
+        <div class="nav-title">
+          <span>GhostPad</span>
+          <span class="badge-version">v1.0.0</span>
+        </div>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#arquitetura" class="nav-link">Arquitetura</a></li>
+        <li><a href="#sandbox" class="nav-link">Simulador & Mapeamento</a></li>
+        <li><a href="#engenharia" class="nav-link">Engenharia</a></li>
+        <li><a href="#instalacao" class="nav-link">Instalação</a></li>
+        <li><a href="#diagnostico" class="nav-link">Diagnóstico</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <div class="status-pill online" id="navStatusPill">
+          <span class="led ok pulse"></span>
+          <span>Kernel ViGEm OK</span>
+        </div>
+        <a href="#instalacao" class="btn-primary btn-sm" id="btnDownloadNav">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Baixar .exe</span>
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ====================================================================
+         HERO SECTION
+         ==================================================================== -->
+    <section class="hero" id="hero">
+      <div class="container">
+        <div class="hero-grid">
+          
+          <!-- Hero Text Column -->
+          <div class="hero-content">
+            <div class="hero-eyebrow">
+              <span class="status-pill online">
+                <span class="led ok"></span>
+                <span>Ponte Bluetooth &middot; Wi-Fi LAN &middot; XInput</span>
+              </span>
+            </div>
+
+            <h1 class="hero-title">
+              Ponte Bluetooth de Baixa Latência via WebSockets & ViGEmBus
+            </h1>
+
+            <p class="hero-lead">
+              Transforme qualquer smartphone (Android ou iPhone) em um receptor sem fio para o seu PC.
+              <strong>O celular lê o controle pela Gamepad API do navegador</strong> e o Windows reconhece
+              um <strong>Xbox 360 oficial</strong> em nível de driver de kernel.
+            </p>
+
+            <div class="hero-cta">
+              <a href="#instalacao" class="btn-primary" id="heroBtnDownload">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Baixar GhostPad.exe</span>
+              </a>
+
+              <a href="#arquitetura" class="btn-secondary" id="heroBtnArch">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                  <polyline points="2 17 12 22 22 17"></polyline>
+                  <polyline points="2 12 12 17 22 12"></polyline>
+                </svg>
+                <span>Ver Pipeline Técnico</span>
+              </a>
+            </div>
+
+            <div class="hero-stats">
+              <div class="hero-stat-item">
+                <span class="hero-stat-num" id="livePingVal">2.8 ms</span>
+                <span class="hero-stat-label">Latência Típica (LAN 5GHz)</span>
+              </div>
+              <div class="hero-stat-item">
+                <span class="hero-stat-num">0 apps</span>
+                <span class="hero-stat-label">Necessários no Celular</span>
+              </div>
+              <div class="hero-stat-item">
+                <span class="hero-stat-num">100%</span>
+                <span class="hero-stat-label">Compatível Steam & XInput</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hero Simulator / Flet UI Replica -->
+          <div class="hero-visual">
+            <div class="flet-preview-window">
+              <!-- Window Header -->
+              <div class="flet-window-header">
+                <div class="window-dots">
+                  <span class="window-dot" style="background:#ff5f56;"></span>
+                  <span class="window-dot" style="background:#ffbd2e;"></span>
+                  <span class="window-dot" style="background:#27c93f;"></span>
+                </div>
+                <span class="window-title">GhostPad v1.0.0 &mdash; Telemetria em Tempo Real</span>
+                <span class="flet-val ok" style="font-size:0.75rem;">ONLINE</span>
+              </div>
+
+              <!-- Window Inner Content -->
+              <div class="flet-app-content">
+                <div class="flet-brand-bar">
+                  <div class="flet-brand-info">
+                    <div class="flet-brand-icon">
+                      <svg viewBox="0 0 24 24">
+                        <path d="M6 11h4M8 9v4M15.5 12h.01M18 10h.01M17.3 7H6.7a3.7 3.7 0 0 0-3.6 4.6l1 4a2.6 2.6 0 0 0 4.5 1l1.1-1.6h6.6l1.1 1.6a2.6 2.6 0 0 0 4.5-1l1-4A3.7 3.7 0 0 0 17.3 7Z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 style="font-size: 1.05rem; font-weight:700;">GhostPad Desktop</h4>
+                      <span style="font-size: 0.75rem; color:var(--text-3); font-family:var(--font-mono);">https://192.168.1.105:8443</span>
+                    </div>
+                  </div>
+                  <span class="status-pill online" style="padding:4px 10px; font-size:0.7rem;">
+                    <span class="led ok pulse"></span>
+                    <span>Ponte Ativa</span>
+                  </span>
+                </div>
+
+                <!-- Status Rows Matching GhostPad Flet UI -->
+                <div class="flet-status-row">
+                  <small>Servidor TLS / WebSocket</small>
+                  <span class="flet-val ok">porta 8443 &middot; escutando</span>
+                </div>
+
+                <div class="flet-status-row">
+                  <small>Celular Conectado</small>
+                  <span class="flet-val ok">192.168.1.142 (1 cliente)</span>
+                </div>
+
+                <div class="flet-status-row">
+                  <small>Controle Detectado</small>
+                  <span class="flet-val ok" id="simStatusPad">Wireless Controller (PS4)</span>
+                </div>
+
+                <div class="flet-status-row">
+                  <small>Controle Virtual (ViGEm)</small>
+                  <span class="flet-val ok">Xbox 360 Controller (XUSB #1)</span>
+                </div>
+
+                <!-- Interactive Dual Stick Component (Same as HTML_CELULAR) -->
+                <div class="dual-sticks-box">
+                  <div class="live-badge-interactive">
+                    <span class="led ok" id="simPadLed"></span>
+                    <span>Toque e arraste os analógicos ou aperte botões no controle:</span>
+                  </div>
+
+                  <div class="sticks-wrapper">
+                    <!-- Left Stick -->
+                    <div class="stick-col">
+                      <div class="stick-label">Analógico Esquerdo (LS)</div>
+                      <div class="stick" id="stickL" title="Arraste para mover o analógico esquerdo">
+                        <div class="stick-crosshair-x"></div>
+                        <div class="stick-crosshair-y"></div>
+                        <div class="dot" id="dotL"></div>
+                      </div>
+                      <div class="stick-values" id="axisValL">X: 0.00 | Y: 0.00</div>
+                    </div>
+
+                    <!-- Right Stick -->
+                    <div class="stick-col">
+                      <div class="stick-label">Analógico Direito (RS)</div>
+                      <div class="stick" id="stickR" title="Arraste para mover o analógico direito">
+                        <div class="stick-crosshair-x"></div>
+                        <div class="stick-crosshair-y"></div>
+                        <div class="dot" id="dotR"></div>
+                      </div>
+                      <div class="stick-values" id="axisValR">X: 0.00 | Y: 0.00</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Mini Telemetry Stream Preview -->
+                <div class="telemetry-mini-log">
+                  <span style="color:var(--text-3);">WSS Frame:</span>
+                  <span class="telemetry-stream" id="telemetryLiveStream">{"b":[],"a":[0,0,0,0],"lt":0,"rt":0}</span>
+                  <span style="color:var(--ok); font-weight:700;">60 FPS</span>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION: O PROBLEMA VS A SOLUÇÃO
+         ==================================================================== -->
+    <section class="section" style="border-top: 1px solid var(--stroke);">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Engenharia Reversa & Inovação</span>
+          <h2 class="section-title">O Dilema do Bluetooth no PC & A Ponte GhostPad</h2>
+          <p class="section-desc">
+            Jogar com controle sem fio no computador geralmente exige dongles proprietários, cabos incômodos ou adaptadores Bluetooth USB com alta perda de pacotes e desemparelhamentos frequentes.
+          </p>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:24px;">
+          <!-- Card: O Problema Antigo -->
+          <div class="glass-card" style="border-color: var(--err-border); background: linear-gradient(180deg, rgba(255,143,143,0.04), transparent 40%), var(--glass-card);">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+              <div style="width:38px; height:38px; border-radius:10px; background:var(--err-bg); display:grid; place-items:center; border:1px solid var(--err-border);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--err)" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </div>
+              <h3 style="font-size:1.15rem; font-weight:700; color:var(--text);">Os Obstáculos Tradicionais</h3>
+            </div>
+            <ul style="list-style:none; display:flex; flex-direction:column; gap:12px; color:var(--text-2); font-size:0.9rem;">
+              <li style="display:flex; gap:10px;">
+                <span style="color:var(--err); font-weight:700;">&times;</span>
+                <span>Placas-mãe desktop sem módulo Bluetooth integrado.</span>
+              </li>
+              <li style="display:flex; gap:10px;">
+                <span style="color:var(--err); font-weight:700;">&times;</span>
+                <span>Dongles USB baratos que sofrem interferência de 2.4GHz e derrubam a conexão.</span>
+              </li>
+              <li style="display:flex; gap:10px;">
+                <span style="color:var(--err); font-weight:700;">&times;</span>
+                <span>Controles DualShock 4 e genéricos não reconhecidos nativamente por jogos que só aceitam XInput.</span>
+              </li>
+              <li style="display:flex; gap:10px;">
+                <span style="color:var(--err); font-weight:700;">&times;</span>
+                <span>Falta de cabo USB longo para jogar confortavelmente no sofá ou cama.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Card: A Abordagem GhostPad -->
+          <div class="glass-card" style="border-color: var(--ok-border); background: linear-gradient(180deg, rgba(143,227,172,0.05), transparent 40%), var(--glass-card);">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+              <div style="width:38px; height:38px; border-radius:10px; background:var(--ok-bg); display:grid; place-items:center; border:1px solid var(--ok-border);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <h3 style="font-size:1.15rem; font-weight:700; color:var(--text);">A Solução Elegante GhostPad</h3>
+            </div>
+            <ul style="list-style:none; display:flex; flex-direction:column; gap:12px; color:var(--text-2); font-size:0.9rem;">
+              <li style="display:flex; gap:10px;">
+                <span style="color:var(--ok); font-weight:700;">&check;</span>
+                <span>O smartphone possui antenas Bluetooth e Wi-Fi de alta potência com excelente estabilidade.</span>
+              </li>
+              <li style="display:flex; gap:10px;">
+                <span style="color:var(--ok); font-weight:700;">&check;</span>
+                <span>Nenhum aplicativo precisa ser baixado na Play Store ou App Store: funciona direto no navegador.</span>
+              </li>
+              <li style="display:flex; gap:10px;">
+                <span style="color:var(--ok); font-weight:700;">&check;</span>
+                <span>Driver de kernel ViGEm emula um Xbox 360 genuíno: suporte nativo a 100% dos jogos da Steam.</span>
+              </li>
+              <li style="display:flex; gap:10px;">
+                <span style="color:var(--ok); font-weight:700;">&check;</span>
+                <span>Transmissão ultra-rápida via WebSocket seguro local (latência média inferior a 3ms).</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION: PIPELINE DE ARQUITETURA
+         ==================================================================== -->
+    <section class="section" id="arquitetura">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Fluxo Completo de Dados</span>
+          <h2 class="section-title">Como o GhostPad Funciona por Dentro</h2>
+          <p class="section-desc">
+            Clique em cada etapa do pipeline abaixo para inspecionar os protocolos de comunicação, especificações técnicas e o código-fonte correspondente.
+          </p>
+        </div>
+
+        <!-- 5-Step Pipeline Selector -->
+        <div class="pipeline-flow" role="tablist">
+          <div class="pipeline-step active" data-step="1" role="tab" tabindex="0">
+            <div class="step-num-pill">01</div>
+            <div class="step-title">Controle Físico</div>
+            <div class="step-sub">DualShock 4 / Xbox / Genérico pareado via Bluetooth HID nativo.</div>
+            <span class="step-meta">Bluetooth 5.0 LE</span>
+          </div>
+
+          <div class="pipeline-step" data-step="2" role="tab" tabindex="0">
+            <div class="step-num-pill">02</div>
+            <div class="step-title">Navegador Mobile</div>
+            <div class="step-sub">Página web lê botões e eixos via W3C Gamepad API com deadzone 0.08.</div>
+            <span class="step-meta">Gamepad API @ 60-120Hz</span>
+          </div>
+
+          <div class="pipeline-step" data-step="3" role="tab" tabindex="0">
+            <div class="step-num-pill">03</div>
+            <div class="step-title">Túnel Local WSS</div>
+            <div class="step-sub">Pacotes JSON assíncronos trafegam por WebSocket sobre TLS com SAN IP.</div>
+            <span class="step-meta">WSS Porta 8443</span>
+          </div>
+
+          <div class="pipeline-step" data-step="4" role="tab" tabindex="0">
+            <div class="step-num-pill">04</div>
+            <div class="step-title">GhostPad Core</div>
+            <div class="step-sub">Python aiohttp decodifica payloads e inverte o eixo Y para o padrão XInput.</div>
+            <span class="step-meta">Asyncio + aiohttp</span>
+          </div>
+
+          <div class="pipeline-step" data-step="5" role="tab" tabindex="0">
+            <div class="step-num-pill">05</div>
+            <div class="step-title">Kernel ViGEmBus</div>
+            <div class="step-sub">Driver XUSB cria o dispositivo virtual Xbox 360 reconhecido pelos jogos.</div>
+            <span class="step-meta">XInput / XUSB.SYS</span>
+          </div>
+        </div>
+
+        <!-- Detailed Explainer & Code Viewer -->
+        <div class="pipeline-detail-panel">
+          <div>
+            <div class="detail-badge" id="detailBadge">CAMADA 01 // ENTRADA FÍSICA</div>
+            <h3 class="detail-heading" id="detailHeading">Pareamento Bluetooth HID Nativo</h3>
+            <p class="detail-body" id="detailBody">
+              O controle (DualShock 4, DualSense, Xbox, 8BitDo ou genérico) conecta-se diretamente ao smartphone via Bluetooth HID padrão. Nenhum driver especial é necessário no celular, pois o kernel do Android/iOS gerencia a pilha Bluetooth e expõe o periférico como Standard Gamepad.
+            </p>
+
+            <div class="detail-specs" id="detailSpecs">
+              <!-- Injected by JS -->
+            </div>
+          </div>
+
+          <!-- Code Inspector with Copy -->
+          <div class="code-block-container">
+            <div class="code-header">
+              <span id="codeHeaderTitle">navigator.getGamepads() // Gamepad API</span>
+              <button class="copy-btn" id="btnCopyPipelineCode" title="Copiar trecho de código">Copiar</button>
+            </div>
+            <pre class="code-content"><code id="codeContentBlock"></code></pre>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION: SIMULADOR INTERATIVO & MAPEAMENTO XINPUT
+         ==================================================================== -->
+    <section class="section" id="sandbox" style="border-top:1px solid var(--stroke);">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Telemetria & Hardware</span>
+          <h2 class="section-title">Mapeamento em Tempo Real de Botões</h2>
+          <p class="section-desc">
+            Abaixo está a representação vetorial do controle Xbox 360 virtual injetado no Windows. Os botões se iluminam dinamicamente conforme você mexe nos controles.
+          </p>
+        </div>
+
+        <div class="playground-grid">
+          
+          <!-- Controller Visualizer Stage -->
+          <div class="controller-stage">
+            <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <span style="font-size:0.85rem; font-weight:600; color:var(--text);">Dispositivo Virtual ViGEm:</span>
+              <span class="status-pill online" style="padding:3px 10px; font-size:0.72rem;">
+                <span class="led ok"></span>
+                <span>Xbox 360 Controller</span>
+              </span>
+            </div>
+
+            <!-- SVG Xbox Controller -->
+            <div class="controller-svg-wrap">
+              <svg viewBox="0 0 500 350" class="gamepad-svg" id="gamepadSvg">
+                <!-- Outer Body -->
+                <path d="M120 70 C160 55, 340 55, 380 70 C430 90, 480 200, 430 290 C390 350, 340 260, 310 240 C280 230, 220 230, 190 240 C160 260, 110 350, 70 290 C20 200, 70 90, 120 70 Z" 
+                      fill="#16161a" stroke="rgba(255,255,255,0.18)" stroke-width="3" />
+                
+                <!-- Inner Grips Subtle Inset -->
+                <path d="M135 90 C180 75, 320 75, 365 90 C405 110, 445 200, 410 270 C380 320, 345 250, 315 235 C280 225, 220 225, 185 235 C155 250, 120 320, 90 270 C55 200, 95 110, 135 90 Z" 
+                      fill="#1f1f25" stroke="rgba(255,255,255,0.06)" stroke-width="1.5" />
+
+                <!-- Left Bumper (LB: 4) & Right Bumper (RB: 5) -->
+                <rect id="svgBtn_4" class="btn-part" x="110" y="45" width="75" height="18" rx="6" fill="#32323a" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" />
+                <rect id="svgBtn_5" class="btn-part" x="315" y="45" width="75" height="18" rx="6" fill="#32323a" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" />
+                <text x="147" y="58" fill="#a1a1a8" font-size="10" font-family="monospace" text-anchor="middle" font-weight="bold">LB</text>
+                <text x="352" y="58" fill="#a1a1a8" font-size="10" font-family="monospace" text-anchor="middle" font-weight="bold">RB</text>
+
+                <!-- Left Trigger (LT: 6) & Right Trigger (RT: 7) Indicators -->
+                <rect id="svgBtn_6" class="btn-part" x="115" y="24" width="65" height="15" rx="4" fill="#222228" stroke="rgba(255,255,255,0.12)" stroke-width="1.5" />
+                <rect id="svgBtn_7" class="btn-part" x="320" y="24" width="65" height="15" rx="4" fill="#222228" stroke="rgba(255,255,255,0.12)" stroke-width="1.5" />
+                <text x="147" y="35" fill="#888892" font-size="9" font-family="monospace" text-anchor="middle">LT</text>
+                <text x="352" y="35" fill="#888892" font-size="9" font-family="monospace" text-anchor="middle">RT</text>
+
+                <!-- Left Stick Thumb (LS: 10) -->
+                <circle cx="160" cy="140" r="32" fill="#282830" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>
+                <circle id="svgBtn_10" class="btn-part" cx="160" cy="140" r="22" fill="#3d3d48" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+                <text x="160" y="144" fill="#888892" font-size="10" font-family="monospace" text-anchor="middle">LS</text>
+
+                <!-- Right Stick Thumb (RS: 11) -->
+                <circle cx="300" cy="200" r="32" fill="#282830" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>
+                <circle id="svgBtn_11" class="btn-part" cx="300" cy="200" r="22" fill="#3d3d48" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+                <text x="300" y="204" fill="#888892" font-size="10" font-family="monospace" text-anchor="middle">RS</text>
+
+                <!-- D-Pad (12: UP, 13: DOWN, 14: LEFT, 15: RIGHT) -->
+                <g transform="translate(160, 205)">
+                  <!-- D-Pad base -->
+                  <path d="M-10 -30 L10 -30 L10 -10 L30 -10 L30 10 L10 10 L10 30 L-10 30 L-10 10 L-30 10 L-30 -10 L-10 -10 Z" fill="#25252c" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+                  <rect id="svgBtn_12" class="btn-part" x="-8" y="-28" width="16" height="18" rx="3" fill="#33333d" />
+                  <rect id="svgBtn_13" class="btn-part" x="-8" y="10" width="16" height="18" rx="3" fill="#33333d" />
+                  <rect id="svgBtn_14" class="btn-part" x="-28" y="-8" width="18" height="16" rx="3" fill="#33333d" />
+                  <rect id="svgBtn_15" class="btn-part" x="10" y="-8" width="18" height="16" rx="3" fill="#33333d" />
+                </g>
+
+                <!-- Action Buttons: A (0), B (1), X (2), Y (3) -->
+                <!-- A: Green -->
+                <circle id="svgBtn_0" class="btn-part" cx="365" cy="165" r="14" fill="#253a2a" stroke="#8fe3ac" stroke-width="1.5"/>
+                <text x="365" y="170" fill="#8fe3ac" font-size="13" font-weight="bold" font-family="sans-serif" text-anchor="middle">A</text>
+
+                <!-- B: Red -->
+                <circle id="svgBtn_1" class="btn-part" cx="395" cy="135" r="14" fill="#3d2528" stroke="#ff8f8f" stroke-width="1.5"/>
+                <text x="395" y="140" fill="#ff8f8f" font-size="13" font-weight="bold" font-family="sans-serif" text-anchor="middle">B</text>
+
+                <!-- X: Blue -->
+                <circle id="svgBtn_2" class="btn-part" cx="335" cy="135" r="14" fill="#223348" stroke="#70b8ff" stroke-width="1.5"/>
+                <text x="335" y="140" fill="#70b8ff" font-size="13" font-weight="bold" font-family="sans-serif" text-anchor="middle">X</text>
+
+                <!-- Y: Yellow -->
+                <circle id="svgBtn_3" class="btn-part" cx="365" cy="105" r="14" fill="#3c3722" stroke="#ffd479" stroke-width="1.5"/>
+                <text x="365" y="110" fill="#ffd479" font-size="13" font-weight="bold" font-family="sans-serif" text-anchor="middle">Y</text>
+
+                <!-- Center Controls: Back (8), Start (9), Xbox Guide (16) -->
+                <circle id="svgBtn_8" class="btn-part" cx="215" cy="135" r="7" fill="#32323a" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+                <circle id="svgBtn_9" class="btn-part" cx="285" cy="135" r="7" fill="#32323a" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+                <circle id="svgBtn_16" class="btn-part" cx="250" cy="115" r="17" fill="#202026" stroke="#8fe3ac" stroke-width="2"/>
+                <path d="M243 108 L257 122 M257 108 L243 122" stroke="#8fe3ac" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+
+            <!-- Controller Detection Hint -->
+            <div class="live-controller-hint" id="gamepadStatusHint">
+              <span class="led warn"></span>
+              <span>Dica: Conecte qualquer controle Bluetooth ou arraste os analógicos virtuais acima.</span>
+            </div>
+          </div>
+
+          <!-- Mapping Reference Table -->
+          <div class="mapping-card">
+            <h3 class="table-header-title">Tabela de Mapeamento W3C &rarr; XInput</h3>
+            <p class="table-header-desc">
+              O dicionário <code>_mapa</code> em <code>ghostpad.py</code> traduz as leituras de botões do navegador diretamente para as flags binárias do driver ViGEmBus:
+            </p>
+
+            <table class="mapping-table">
+              <thead>
+                <tr>
+                  <th>Controle PS4 / Genérico</th>
+                  <th>Índice W3C</th>
+                  <th>Xbox 360 (XUSB)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="key-tag key-ps4">&cross; Cruz (X)</span></td>
+                  <td><code>buttons[0]</code></td>
+                  <td><span class="key-tag key-xbox">Botão A</span></td>
+                </tr>
+                <tr>
+                  <td><span class="key-tag key-ps4">&#9675; Círculo</span></td>
+                  <td><code>buttons[1]</code></td>
+                  <td><span class="key-tag key-xbox">Botão B</span></td>
+                </tr>
+                <tr>
+                  <td><span class="key-tag key-ps4">&#9633; Quadrado</span></td>
+                  <td><code>buttons[2]</code></td>
+                  <td><span class="key-tag key-xbox">Botão X</span></td>
+                </tr>
+                <tr>
+                  <td><span class="key-tag key-ps4">&#9651; Triângulo</span></td>
+                  <td><code>buttons[3]</code></td>
+                  <td><span class="key-tag key-xbox">Botão Y</span></td>
+                </tr>
+                <tr>
+                  <td><span class="key-tag key-ps4">L1 / R1 (Bumpers)</span></td>
+                  <td><code>buttons[4, 5]</code></td>
+                  <td><span class="key-tag key-xbox">LB / RB</span></td>
+                </tr>
+                <tr>
+                  <td><span class="key-tag key-ps4">L2 / R2 (Gatilhos Analógicos)</span></td>
+                  <td><code>buttons[6, 7]</code></td>
+                  <td><span class="key-tag key-xbox">LT / RT (0.00 a 1.00)</span></td>
+                </tr>
+                <tr>
+                  <td><span class="key-tag key-ps4">Share / Options</span></td>
+                  <td><code>buttons[8, 9]</code></td>
+                  <td><span class="key-tag key-xbox">Back / Start</span></td>
+                </tr>
+                <tr>
+                  <td><span class="key-tag key-ps4">L3 / R3 (Clique Analógico)</span></td>
+                  <td><code>buttons[10, 11]</code></td>
+                  <td><span class="key-tag key-xbox">LS / RS Click</span></td>
+                </tr>
+                <tr>
+                  <td><span class="key-tag key-ps4">D-Pad Direcional</span></td>
+                  <td><code>buttons[12..15]</code></td>
+                  <td><span class="key-tag key-xbox">DPAD Up/Down/Left/Right</span></td>
+                </tr>
+                <tr>
+                  <td><span class="key-tag key-ps4">Botão PS</span></td>
+                  <td><code>buttons[16]</code></td>
+                  <td><span class="key-tag key-xbox">Xbox Guide Button</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION: ENGENHARIA DE BAIXO NÍVEL & PILHA DE TECNOLOGIAS
+         ==================================================================== -->
+    <section class="section" id="engenharia" style="border-top:1px solid var(--stroke);">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Engenharia de Software</span>
+          <h2 class="section-title">Pilha Tecnológica & Arquitetura de Baixo Nível</h2>
+          <p class="section-desc">
+            Cada componente do GhostPad foi escolhido para minimizar o overhead de sistema e garantir resposta instantânea em jogos competitivos.
+          </p>
+        </div>
+
+        <div class="tech-grid">
+          <!-- Card 1: ViGEmBus Kernel -->
+          <div class="tech-card">
+            <div class="tech-icon-wrap">
+              <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+            </div>
+            <h3 class="tech-title">Driver ViGEmBus</h3>
+            <p class="tech-desc">
+              O <em>Virtual Gamepad Emulation Bus</em> opera no anel 0 (Ring-0 Kernel Mode) do Windows. Ele injeta comandos diretamente no barramento USB do sistema operacional, tornando o GhostPad invisível para anticheats como Vanguard ou Easy Anti-Cheat.
+            </p>
+            <div class="tech-badge-list">
+              <span class="tech-pill">XUSB.SYS</span>
+              <span class="tech-pill">vgamepad</span>
+              <span class="tech-pill">Ring-0 Kernel</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Asyncio & aiohttp -->
+          <div class="tech-card">
+            <div class="tech-icon-wrap">
+              <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <h3 class="tech-title">Python Asyncio & aiohttp</h3>
+            <p class="tech-desc">
+              O servidor de ponte opera com loops de eventos não-bloqueantes. Conexões de clientes e transferências de pacotes não concorrem com a renderização da interface e alcançam milhares de frames por segundo com consumo residual de CPU (&lt; 0.5%).
+            </p>
+            <div class="tech-badge-list">
+              <span class="tech-pill">Event Loop</span>
+              <span class="tech-pill">Threading Event</span>
+              <span class="tech-pill">WebSocket WSS</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Cryptography & Auto TLS -->
+          <div class="tech-card">
+            <div class="tech-icon-wrap">
+              <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <h3 class="tech-title">Criptografia Dinâmica x509</h3>
+            <p class="tech-desc">
+              Geração pontual de pares de chaves RSA 2048-bit e certificados x509 com extensão <code>SubjectAlternativeName</code> embutindo o endereço IPv4 local (ex: <code>192.168.1.x</code>). Garante conformidade com as políticas rígidas de HTTPS dos navegadores modernos.
+            </p>
+            <div class="tech-badge-list">
+              <span class="tech-pill">cryptography</span>
+              <span class="tech-pill">RSA 2048</span>
+              <span class="tech-pill">TLS 1.3</span>
+            </div>
+          </div>
+
+          <!-- Card 4: Flet GUI -->
+          <div class="tech-card">
+            <div class="tech-icon-wrap">
+              <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            </div>
+            <h3 class="tech-title">Interface Futurista Flet</h3>
+            <p class="tech-desc">
+              Construído sobre o motor Flutter adaptado para Python, o GhostPad oferece aceleração gráfica por hardware com paleta grafite / obsidian, cantos hiperbólicos suaves, micro-animações responsivas e painel de controle intuitivo.
+            </p>
+            <div class="tech-badge-list">
+              <span class="tech-pill">Flet Desktop</span>
+              <span class="tech-pill">Hardware Skia</span>
+              <span class="tech-pill">Dark Graphite</span>
+            </div>
+          </div>
+
+          <!-- Card 5: Segno QR Code -->
+          <div class="tech-card">
+            <div class="tech-icon-wrap">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            </div>
+            <h3 class="tech-title">Pareamento Instantâneo QR Code</h3>
+            <p class="tech-desc">
+              A biblioteca <code>segno</code> compila matrizes QR bidimensionais puras em tempo de execução contendo a URL exata com o IP detectado na interface de rede privada. Basta apontar a câmera do celular para conectar sem digitar URLs longas.
+            </p>
+            <div class="tech-badge-list">
+              <span class="tech-pill">segno</span>
+              <span class="tech-pill">LAN Discovery</span>
+              <span class="tech-pill">PNG / Base64</span>
+            </div>
+          </div>
+
+          <!-- Card 6: Screen WakeLock API -->
+          <div class="tech-card">
+            <div class="tech-icon-wrap">
+              <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+            </div>
+            <h3 class="tech-title">Screen Wake Lock API</h3>
+            <p class="tech-desc">
+              Dispositivos móveis tendem a suspender threads de WebSockets quando a tela escurece. O botão <em>"Manter tela ligada"</em> aciona a API W3C WakeLock para manter a GPU e as antenas operando com taxa de atualização máxima durante sua partida.
+            </p>
+            <div class="tech-badge-list">
+              <span class="tech-pill">Screen WakeLock</span>
+              <span class="tech-pill">No Sleep</span>
+              <span class="tech-pill">Zero Throttling</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION: GUIA DE INSTALAÇÃO & TUTORIAL
+         ==================================================================== -->
+    <section class="section" id="instalacao" style="border-top:1px solid var(--stroke);">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Passo a Passo</span>
+          <h2 class="section-title">Como Instalar e Começar a Jogar</h2>
+          <p class="section-desc">
+            Escolha sua forma preferida de execução: executável pronto para Windows ou rodando direto do código-fonte em Python.
+          </p>
+        </div>
+
+        <!-- Tabs Pill Switcher -->
+        <div class="tabs-control">
+          <div class="tabs-pill-wrap">
+            <button class="tab-btn active" data-tab="tab-exe">Opção 1: Executável (.exe)</button>
+            <button class="tab-btn" data-tab="tab-code">Opção 2: Código Fonte (Python)</button>
+            <button class="tab-btn" data-tab="tab-build">Opção 3: Compilar seu .exe</button>
+          </div>
+        </div>
+
+        <!-- Tab 1: Executable -->
+        <div class="tab-content active" id="tab-exe">
+          <div class="install-grid">
+            <div class="step-card">
+              <div class="step-badge-circle">1</div>
+              <h3>Baixar GhostPad.exe</h3>
+              <p>Baixe a versão pré-compilada da release. Ao abrir pela primeira vez, o Windows Firewall solicitará permissão de rede: marque <strong>Rede Privada</strong>.</p>
+              <div style="margin-top:auto;">
+                <a href="https://github.com/pedaeadr-hash/ghostpad/releases" target="_blank" class="btn-primary btn-sm" style="width:100%;">
+                  <span>Acessar Releases</span>
+                </a>
+              </div>
+            </div>
+
+            <div class="step-card">
+              <div class="step-badge-circle">2</div>
+              <h3>Instalar o Driver ViGEmBus</h3>
+              <p>No painel do app, clique no botão <strong>INSTALAR DRIVER</strong>. Ele fará o download da versão v1.22.0 oficial e executará o assistente do Windows. Reinicie se solicitado.</p>
+              <span class="tech-pill" style="align-self:flex-start;">Apenas 1 vez</span>
+            </div>
+
+            <div class="step-card">
+              <div class="step-badge-circle">3</div>
+              <h3>Iniciar o Servidor & Escanear</h3>
+              <p>Clique em <strong>INICIAR SERVIDOR</strong>. Aponte a câmera do celular para o QR Code gerado, aceite o certificado autoassinado e toque em <strong>Manter tela ligada</strong>.</p>
+              <span class="tech-pill" style="align-self:flex-start;">Pronto para jogar</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Python Source Code -->
+        <div class="tab-content" id="tab-code">
+          <div class="glass-card" style="padding:28px;">
+            <h3 style="font-size:1.15rem; font-weight:700; margin-bottom:12px;">Execução via Terminal (Python 3.12+)</h3>
+            <p style="color:var(--text-2); font-size:0.9rem; margin-bottom:18px;">
+              Clone o repositório, crie um ambiente virtual isolado, instale as dependências e inicie o aplicativo:
+            </p>
+
+            <div class="code-block-container">
+              <div class="code-header">
+                <span>PowerShell / CMD</span>
+                <button class="copy-btn" id="btnCopyTerminalCmd">Copiar Comandos</button>
+              </div>
+              <pre class="code-content" id="terminalCommands"><code class="hl-com"># 1. Clonar repositório</span>
+git clone https://github.com/pedaeadr-hash/ghostpad.git
+cd ghostpad
+
+<span class="hl-com"># 2. Criar e ativar o ambiente virtual</span>
+py -m venv .venv
+.venv\Scripts\activate
+
+<span class="hl-com"># 3. Instalar pacotes necessários</span>
+pip install -r requirements.txt
+
+<span class="hl-com"># 4. Executar o GhostPad</span>
+python ghostpad.py</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Build Custom .EXE -->
+        <div class="tab-content" id="tab-build">
+          <div class="glass-card" style="padding:28px;">
+            <h3 style="font-size:1.15rem; font-weight:700; margin-bottom:12px;">Gerar seu Próprio Executável Standalone</h3>
+            <p style="color:var(--text-2); font-size:0.9rem; margin-bottom:18px;">
+              O projeto acompanha um script <code>build.bat</code> automatizado que utiliza o <strong>PyInstaller</strong> com o arquivo de especificação <code>GhostPad.spec</code>:
+            </p>
+
+            <div class="code-block-container">
+              <div class="code-header">
+                <span>build.bat</span>
+                <button class="copy-btn">Copiar</button>
+              </div>
+              <pre class="code-content"><code class="hl-com">:: Dê duplo clique em build.bat ou rode no terminal:</span>
+.\build.bat
+
+<span class="hl-com">:: O binário executável final será empacotado em:</span>
+dist\GhostPad.exe</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Warning / Callout Note -->
+        <div class="dica-box">
+          <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <div>
+            <h4>Aviso de Certificado HTTPS no Celular: Por que é normal?</h4>
+            <p>
+              Ao abrir a página no Chrome ou Safari, o navegador alertará que o certificado é desconhecido. Isso acontece porque o certificado TLS é gerado localmente na hora para proteger o túnel WSS na sua rede privada. Clique em <strong>"Avançado &rarr; Continuar para o site (não seguro)"</strong> para prosseguir.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         SECTION: DIAGNÓSTICO & SOLUÇÃO DE PROBLEMAS
+         ==================================================================== -->
+    <section class="section" id="diagnostico" style="border-top:1px solid var(--stroke);">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Troubleshooting</span>
+          <h2 class="section-title">Matriz de Diagnóstico & Resolução</h2>
+          <p class="section-desc">
+            Encontrou algum comportamento inesperado? Consulte nossa base de soluções rápidas.
+          </p>
+        </div>
+
+        <div class="trouble-container">
+          <!-- Item 1 -->
+          <div class="trouble-item open">
+            <div class="trouble-header">
+              <div class="trouble-title">
+                <span class="trouble-icon-dot"></span>
+                <span>O app informa: "Driver não instalado" ou falha ao criar pad</span>
+              </div>
+              <svg class="trouble-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="trouble-body">
+              <p>O Windows precisa do driver de barramento de kernel ViGEmBus para simular controles Xbox 360.</p>
+              <div class="solution-badge">&check; Solução Recomendada</div>
+              <p>Clique no botão <strong>INSTALAR DRIVER</strong> na interface do GhostPad. Confirme a permissão de administrador do Windows e reinicie o computador uma única vez para registrar o serviço <code>XUSB.SYS</code>.</p>
+            </div>
+          </div>
+
+          <!-- Item 2 -->
+          <div class="trouble-item">
+            <div class="trouble-header">
+              <div class="trouble-title">
+                <span class="trouble-icon-dot"></span>
+                <span>O celular não consegue abrir a página ou dá "Tempo Esgotado"</span>
+              </div>
+              <svg class="trouble-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="trouble-body">
+              <p>Ocorre quando o celular e o computador estão em redes diferentes ou o Firewall bloqueou a porta.</p>
+              <div class="solution-badge">&check; Solução Recomendada</div>
+              <p>1. Verifique se o smartphone está conectado exatamente no mesmo roteador Wi-Fi que o PC.<br>
+                 2. Certifique-se de que a rede no Windows está definida como "Rede Privada" e não "Rede Pública".<br>
+                 3. Se o roteador tiver isolamento de clientes (AP Isolation), desative-o nas configurações do Wi-Fi.</p>
+            </div>
+          </div>
+
+          <!-- Item 3 -->
+          <div class="trouble-item">
+            <div class="trouble-header">
+              <div class="trouble-title">
+                <span class="trouble-icon-dot"></span>
+                <span>Controle aparece como "NÃO DETECTADO" no navegador do celular</span>
+              </div>
+              <svg class="trouble-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="trouble-body">
+              <p>Por motivos de privacidade e economia de bateria, a Gamepad API do navegador não divulga a existência de controles até que um botão seja fisicamente pressionado.</p>
+              <div class="solution-badge">&check; Solução Recomendada</div>
+              <p>Pareie o controle no Bluetooth do celular e aperte qualquer botão (X, Quadrado, D-Pad). O status mudará imediatamente para verde com o nome do controle.</p>
+            </div>
+          </div>
+
+          <!-- Item 4 -->
+          <div class="trouble-item">
+            <div class="trouble-header">
+              <div class="trouble-title">
+                <span class="trouble-icon-dot"></span>
+                <span>Porta 8443 já está em uso</span>
+              </div>
+              <svg class="trouble-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="trouble-body">
+              <p>Outra instância do GhostPad ou outro serviço web (ex: Docker, Apache) está ouvindo nessa porta.</p>
+              <div class="solution-badge">&check; Solução Recomendada</div>
+              <p>Feche outras janelas do GhostPad no Gerenciador de Tarefas ou altere a constante <code>PORTA = 8443</code> no arquivo <code>ghostpad.py</code> para outra porta livre (ex: 8888 ou 9443).</p>
+            </div>
+          </div>
+
+          <!-- Item 5 -->
+          <div class="trouble-item">
+            <div class="trouble-header">
+              <div class="trouble-title">
+                <span class="trouble-icon-dot"></span>
+                <span>Dois controles virtuais aparecem no joy.cpl do Windows</span>
+              </div>
+              <svg class="trouble-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="trouble-body">
+              <p>Você pode ter deixado duas abas do navegador abertas no celular ou em outro aparelho da casa.</p>
+              <div class="solution-badge">&check; Solução Recomendada</div>
+              <p>Feche abas antigas ou duplicadas no navegador do celular para manter apenas uma sessão ativa de WebSocket.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- ====================================================================
+       FOOTER
+       ==================================================================== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        
+        <div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div class="nav-icon">
+              <img src="assets/icon.png" alt="GhostPad Icon" width="24" height="24">
+            </div>
+            <span style="font-size:1.15rem; font-weight:700;">GhostPad</span>
+            <span class="badge-version">v1.0.0</span>
+          </div>
+          <p class="footer-brand-desc">
+            Ponte de controle de baixa latência que transforma celulares em receptores sem fio com emulação nativa de Xbox 360 para Windows.
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h5>Navegação</h5>
+          <ul class="footer-links">
+            <li><a href="#hero">Início</a></li>
+            <li><a href="#arquitetura">Arquitetura Técnica</a></li>
+            <li><a href="#sandbox">Mapeamento & Joysticks</a></li>
+            <li><a href="#engenharia">Engenharia de Baixo Nível</a></li>
+            <li><a href="#instalacao">Guia de Instalação</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h5>Ecossistema Open Source</h5>
+          <ul class="footer-links">
+            <li><a href="https://github.com/nefarius/ViGEmBus" target="_blank" rel="noopener">Driver ViGEmBus</a></li>
+            <li><a href="https://flet.dev" target="_blank" rel="noopener">Framework Flet</a></li>
+            <li><a href="https://docs.aiohttp.org" target="_blank" rel="noopener">Servidor aiohttp</a></li>
+            <li><a href="https://github.com/yannbouteiller/vgamepad" target="_blank" rel="noopener">vgamepad Python</a></li>
+            <li><a href="https://github.com/pedaeadr-hash/ghostpad" target="_blank" rel="noopener">Repositório GitHub</a></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          Licença MIT &middot; Desenvolvido para a comunidade gamer &middot; 2026
+        </div>
+        <div>
+          Compatível com Windows 10 & 11 (x64) &middot; Android & iOS
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Script -->
+  <script src="app.js"></script>
+</body>
+</html>
